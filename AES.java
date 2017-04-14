@@ -114,10 +114,9 @@ public class AES {
 		PrintWriter pw = new PrintWriter(outputFile);
 		// 1. expand cipher key
 		expandKey(keyMatrix, expandedKey);
-		
 		// 2. add round key
 		addRoundKey(0);
-//		// 3. 13 rounds
+		// 3. 13 rounds
 //		for (int i = 1; i < 14; i++) {
 //			subBytes();
 //			shiftRows();
@@ -158,7 +157,7 @@ public class AES {
 		}
 		// Print state after subBytes()
 		System.out.println("After subBytes:");
-		printMatrix(state);
+		printState();
 	}
 	
 	public static void shiftRows() {
@@ -277,6 +276,9 @@ public class AES {
 		System.out.println("The CipherKey is:");
 		printMatrix(keyMatrix);
 	}
+	/*
+	 * printMatrix prints out all matrixes in correct format
+	 */
 	public static void printMatrix(int[][] m) {
 		for (int i=0; i < m.length; i++) {
 		    for (int j=0; j < m[i].length; j++) {
@@ -288,8 +290,12 @@ public class AES {
 		    }
     		System.out.println();
 		}
+		System.out.println();
 	}
 	
+	/*
+	 * printState prints state matrix in one giant string
+	 */
 	public static void printState() {
 		String str = "";
 		for (int i = 0; i < state.length; i++) {

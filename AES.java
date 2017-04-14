@@ -65,6 +65,64 @@ public class AES {
 		0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd,
 		0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d};
 	
+		public static int[][] shiftRow(int[] row) {
+	    int size = row.length;
+        int[][] shifted = new int[size][size];
+        shifted[0] = row;
+
+        for (int i = 1; i < size; i++) {
+            //int save;
+            for (int j = 0; j < size; j++) {
+                //save = shifted[i-1][(j+1) % size];
+                shifted[i][(j+1)%size] = shifted[i-1][j];
+            }
+        }
+        return shifted;
+    }
+    public static int[][] matrixMultiply(int[][] multiplicand, int[][] multiplier) {
+        int[][] product = new int[multiplicand.length][multiplier[0].length];
+        for (int i = 0; i < multiplicand.length; i++) {
+            for (int j = 0; j < multiplier[0].length; j++) {
+                for (int k = 0; k < multiplicand[i].length; k++) {
+                    product[i][j] += multiplicand[i][k] * multiplier[k][j];
+                }
+            }
+        }
+        return product;
+    }
+
+    public static int[][] matrixAdd(int[][] addend1, int[][]addend2) {
+        int[][] sum = new int[addend1.length][addend2[0].length];
+        for (int i = 0; i < addend1.length; i++) {
+            for (int j = 0; j < addend2[0].length; j++) {
+                sum[i][j] += addend1[i][j] + addend2[i][j];
+            }
+        }
+        return sum;
+    }
+    /* Not Done */
+	public static int[][] genFLookup() {
+        int[][] lookup = new int [16][16];
+        int[] row = {1, 0, 0, 0, 1, 1, 1};
+        int[][] column = new int[1][8];
+        int[][] affine = shiftRow(row);
+
+        // g = rows. k = cols
+        for (int g = 0; g < 16; g++) {
+            for (int k = 0; k < 16; k++) {
+                for (int i = 0; i < column.length; i++) {
+                    // generates column to multiply by the affine
+                    if (i < 4)
+                        column[i][0] = Character.getNumericValue(Integer.toBinaryString(k).charAt(column.length - i));
+                    else
+                        column[i][0] = Character.getNumericValue(Integer.toBinaryString(k).charAt(column.length - i%4));
+                }
+            }
+        }
+        return lookup;
+	}
+	
+	
 	/*
 	 * expandKey() expands the key
 	 */

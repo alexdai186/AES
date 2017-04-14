@@ -3,8 +3,11 @@ import java.lang.*;
 import java.util.*;
 
 public class AES {
+	// Nb = 4, Nk = 8, Nr = 14
 	private static int[][] state = new int[4][4]; // 128 bit input, in a 4x4 array as INTS
-	private static String[][] stateAsStrings = new String[4][4]; // 128 bit input, in a 4x4 array as STRINGS
+	private static int[][] keyMatrix = new int[4][8];
+	private static int[][] expandedKey = new int[4][60]; // W[4][Nb*(Nr+1)]
+	// Source: http://cryptography.wikia.com/wiki/Rijndael_S-box
 	public final static int[][] sBox = {
 		/*0*/{0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76},
 		/*1*/{0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0}, 
@@ -23,6 +26,7 @@ public class AES {
 		/*14*/{0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf},
 		/*15*/{0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16}};
 	
+	// Source: http://cryptography.wikia.com/wiki/Rijndael_S-box
 	public static final int[][] invSBox = {
 		{0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb}, 
 		{0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb}, 
@@ -40,68 +44,158 @@ public class AES {
 		{0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef}, 
 		{0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61}, 
 		{0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d}};
-
+	
+	// Source: https://en.wikipedia.org/wiki/Rijndael_key_schedule#Rcon
+	// For key expansion
+	public static final int[] rcon = {
+		0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a,
+		0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39,
+		0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a,
+		0x74, 0xe8, 0xcb, 0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8,
+		0xab, 0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef,
+		0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc,
+		0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b,
+		0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3,
+		0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94,
+		0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20,
+		0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35,
+		0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f,
+		0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d, 0x01, 0x02, 0x04,
+		0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63,
+		0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd,
+		0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d};
+	
 	/*
-	 * encodes the inputfile with the given key
+	 * expandKey() expands the key
+	 */
+	public static void expandKey(int[][] k, int[][] w) {
+		for(int j = 0; j < 8; j++)
+			for (int i = 0; i < 4; i++)
+				w[i][j] = k[i][j];
+		
+		for (int j = 8; j < 60; j++) {
+			if (j % 8 == 0) {
+				w[0][j] = w[0][j-8] ^ subBytesReplace(w, 1, j-1) ^ rcon[j/8];
+				for (int i = 1; i<4; i++)
+					w[i][j] = w[i][j-8] ^ subBytesReplace(w, (i+1)%4, j-1);
+			}
+			else if (j % 8 == 4) {
+				for (int i = 0; i < 4; i++)
+					w[i][j] = w[i][j-8] ^ subBytesReplace(w, i, j-1);
+			}
+			else {
+				for (int i = 0; i < 4; i++)
+					w[i][j] = w[i][j-8] ^ w[i][j-1];
+			}
+		}
+		System.out.println("The expanded key is:");
+		// ????????
+	}
+	
+	/*
+	 * rotWord takes a word (an array) and rotates it so that the first value becomes the last
+	 * used in expandKey()
+	 */
+	public static String[] rotWord(String[] arr) {
+		String temp = arr[0];
+		for (int i = 0; i < 3; i++) {
+			arr[i] = arr[i+1];
+		}
+		arr[3] = temp; 
+		return arr;
+	}
+	
+	//--------------------------------------ENCODING-----------------------------------------------
+	/*
+	 * encodes the inputfile with the given key string
 	 * creates an encrypted outputfile (inputFile.enc)
 	 */
-	public static void encode(File inputFile, File key, File outputFile) throws IOException {
+	public static void encode(File inputFile, String key, File outputFile) throws IOException {
 		PrintWriter pw = new PrintWriter(outputFile);
-		expandKey();
-		// before first round begins
+		// 1. expand cipher key
+		expandKey(keyMatrix, expandedKey);
+		
+		// 2. add round key
 		addRoundKey(0);
-		for (int i = 1; i < 14; i++) {
-			subBytes();
-			shiftRows();
-			mixColumns();
-			addRoundKey(i);
-		}
-		subBytes();
-		shiftRows();
-		addRoundKey(14);
+//		// 3. 13 rounds
+//		for (int i = 1; i < 14; i++) {
+//			subBytes();
+//			shiftRows();
+//			mixColumns();
+//			addRoundKey(i);
+//		}
+//		subBytes();
+//		shiftRows();
+//		addRoundKey(14);
 	}
+	
+	/*
+	 * subBytesReplace() replaces the value at the specific r and c for the specified matrix m
+	 * r the row position to replace
+	 * c the column position to replace
+	 */
+	public static int subBytesReplace(int[][] m, int r, int c) {
+		int val = m[r][c];
+        // Convert each int value into Hex form first
+        String hex = Integer.toHexString(val);
+        // 00 parses to 0, so need to add another 0 back
+        if (hex.length() == 1)
+			hex += "0";
+    	int row = Integer.parseInt(hex.charAt(0) + "",16);
+    	int column = Integer.parseInt(hex.charAt(1) + "",16);
+    	m[r][c] = sBox[row][column];
+		return m[r][c];
+	}
+	
 	/*
 	 * subBytes() performs substitution. Replaces all values in state with values from sBox[][]
 	 */
 	public static void subBytes() {
-		for (int row=0; row < stateAsStrings.length; row++) {
-		    for (int col=0; col < stateAsStrings[row].length; col++) {
-		    	// Convert each int into Hex form first
-		        String val = stateAsStrings[row][col];
-		    	int r = Integer.parseInt(val.charAt(0)+"", 16);
-		    	int c = Integer.parseInt(val.charAt(1)+"", 16);
-		    	System.out.println("sBox "+ sBox[r][c]);
-		    	stateAsStrings[row][col] = Integer.toHexString(sBox[r][c]).toUpperCase();
+		for (int row=0; row < state.length; row++) {
+		    for (int col=0; col < state[row].length; col++) {
+		    	subBytesReplace(state, row, col);
 		    }
 		}
-		
+		// Print state after subBytes()
 		System.out.println("After subBytes:");
-		for (int col=0; col < stateAsStrings.length; col++) {
-		    for (int row=0; row < stateAsStrings[0].length; row++) {
-		    	System.out.print(stateAsStrings[row][col]);
-		    }
-		}
+		printMatrix(state);
 	}
+	
 	public static void shiftRows() {
 
 	}
+	
 	public static void mixColumns() {
 	
 	}
-	// A bit-wise XOR between the state and expanded key
-	public static void addRoundKey(int i) {
 	
-	}
-	public static void expandKey() {
+	// A bit-wise XOR between the state and expanded key
+	public static void addRoundKey(int round) {
+		int shift = 0;
+		if (round != 0)
+			shift = round*state.length;
+
+		int index = 0;
+		for (int c = shift; c < state.length + shift; c++) {
+			for (int r = 0; r < state[0].length; r++) {
+				state[r][index] ^= expandedKey[r][c];
+			}
+			index++;
+		} 
+		
+		System.out.println("After addRoundKey(" + round + "):");
+		printState();
 
 	}
+	
+	//--------------------------------------DECODING-----------------------------------------------
 	/*
 	 * decodes the inputfile with the given key
 	 * creates a decrypted file (inputFile.dec)
 	 */
-	public static void decode(File inputFile, File key, File outputFile) throws IOException {
+	public static void decode(File inputFile, String key, File outputFile) throws IOException {
 		PrintWriter pw = new PrintWriter(outputFile);
-		expandKey();
+		expandKey(keyMatrix, expandedKey);
 		// before first round begins
 		addRoundKey(14);
 		invShiftRows();
@@ -114,8 +208,23 @@ public class AES {
 		}
 		addRoundKey(0);
 	}
+	/*
+	 * invSubBytes() performs substitution. Replaces all values in state with values from invSBox[][]
+	 */
 	public static void invSubBytes() {
-
+		for (int row=0; row < state.length; row++) {
+		    for (int col=0; col < state[row].length; col++) {
+		        int val = state[row][col];
+		        // Convert each int into Hex form first
+		        String hex = Integer.toHexString(val);
+		        int r = Integer.parseInt(hex.charAt(0) + "",16);
+		    	int c = Integer.parseInt(hex.charAt(1) + "",16);
+		    	state[row][col] = invSBox[r][c];
+		    }
+		}
+		// Print state after subBytes()
+		System.out.println("After subBytes:");
+		printMatrix(state);
 	}
 	public static void invShiftRows() {
 
@@ -123,16 +232,16 @@ public class AES {
 	public static void invMixColumns() {
 	
 	}
-	public static void createStateArrays(String line) {
+	
+	// ------------------------------------------CREATING MATRICES-----------------------------------------
+	public static void createStateMatrix(String line) {
 		// 00112233(Col1)	44556677(Col2)	8899AABB(Col3)	CCDDEEFF(Col4)
 		int row = 0;
 		int column = 0;
 		for (int i = 0; i < line.length(); i+=2) {
 			String hex = line.charAt(i) + "" + line.charAt(i+1);
 			// convert hex to int using Integer.parseInt(string, 16)
-//			state[row][column] = Integer.parseInt(hex, 16);
-			// just store hex as strings
-			stateAsStrings[row][column] = hex;
+			state[row][column] = Integer.parseInt(hex, 16);
 			// Fill in each column first
 			if ((i+2) % 8 == 0) {
 				column++;
@@ -141,24 +250,54 @@ public class AES {
 				row++;
 			}
 		}
-		
-		// Print out state array to console
-//		System.out.println("The Plaintext is:");
-//		for (int i=0; i < state.length; i++) {
-//		    for (int j=0; j < state[i].length; j++) {
-//				// convert int back to hex using Integer.toHexString(int)
-//		    	System.out.print(Integer.toHexString(state[i][j]).toUpperCase() + "\t");
-//		    }
-//    		System.out.println();
-//		}
 		// Print out state array to console
 		System.out.println("The Plaintext is:");
-		for (int i=0; i < stateAsStrings.length; i++) {
-		    for (int j=0; j < stateAsStrings[i].length; j++) {
-		    	System.out.print(stateAsStrings[i][j]+ "\t");
+		printMatrix(state);
+	}
+	
+	/*
+	 * createkeymatrix() converts keystring into a 4x8 matrix
+	 */
+	public static void createKeyMatrix(String key) {
+		// 0000000000000000000000000000000000000000000000000000000000000000
+		int row = 0;
+		int col = 0;
+		for (int i=0; i < key.length(); i+=2) {
+			String hex = key.charAt(i) + "" + key.charAt(i+1);
+			keyMatrix[row][col] = Integer.parseInt(hex, 16);
+			// Fill in each column first
+			if ((i+2) % 8 == 0) {
+				col++;
+				row = 0;
+			} else {
+				row++;
+			}
+		}
+		// Print out state array to console
+		System.out.println("The CipherKey is:");
+		printMatrix(keyMatrix);
+	}
+	public static void printMatrix(int[][] m) {
+		for (int i=0; i < m.length; i++) {
+		    for (int j=0; j < m[i].length; j++) {
+		    	// convert int back to hex using Integer.toHexString(int)
+		    	String val = Integer.toHexString(m[i][j]).toUpperCase();
+		    	if (val.length() == 1) // only 1 0
+					val += "0";
+				System.out.print(val + "\t");
 		    }
     		System.out.println();
 		}
+	}
+	
+	public static void printState() {
+		String str = "";
+		for (int i = 0; i < state.length; i++) {
+			for (int j = 0; j < state[0].length; j++) {
+				str += Integer.toHexString(state[j][i]).toUpperCase(); 
+			}
+		}
+		System.out.println(str);
 	}
 	public static void main(String args[]) throws FileNotFoundException {
 		// Parse command line args
@@ -167,6 +306,7 @@ public class AES {
 		File key = new File(args[1]);
 		File outputFile = null;
 		boolean encoding = false;
+		String keyString = "";
 		
 		// Parse command line action - Encoding or Decoding
 		String action = args[0];
@@ -177,22 +317,30 @@ public class AES {
 		else {
 			outputFile = new File(args[2] + ".dec");
 		}
+		
 		Scanner scanInput = new Scanner(inputFile);
+		Scanner scanKey = new Scanner(key);
+		
 		try {
+			// get keyString
+			while (scanKey.hasNextLine()) {
+				keyString += scanKey.nextLine();
+			}
 			// LOOP OVER EACH LINE IN INPUTFILE. EACH LINE REPRESENTS 128 BITS
 			while (scanInput.hasNextLine()) {
 				String line = scanInput.nextLine();
 				// Fill state array
-				createStateArrays(line);
-				subBytes();
+				createStateMatrix(line);
+				createKeyMatrix(keyString);
 				// Call encode/decode
 				if (encoding) {
-//					encode(inputFile, key, outputFile);
+					encode(inputFile, keyString, outputFile);
 				} else {
-					decode(inputFile, key, outputFile);
+					decode(inputFile, keyString, outputFile);
 				}
 			}
 			scanInput.close();
+			scanKey.close();
 		} catch(IOException e) {
 			System.out.println(e.toString() + "occurred when opening file!!");
 		}

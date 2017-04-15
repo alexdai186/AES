@@ -1,5 +1,4 @@
 import java.io.*;
-import java.lang.*;
 import java.util.*;
 
 public class AES {
@@ -27,7 +26,7 @@ public class AES {
 		/*15*/{0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16}};
 	
 	// Source: http://cryptography.wikia.com/wiki/Rijndael_S-box
-	public static final int[][] invSBox = {
+	public final static int[][] invSBox = {
 		{0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb}, 
 		{0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb}, 
 		{0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e}, 
@@ -47,7 +46,7 @@ public class AES {
 	
 	// Source: https://en.wikipedia.org/wiki/Rijndael_key_schedule#Rcon
 	// For key expansion
-	public static final int[] rcon = {
+	public final static int[] rcon = {
 		0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a,
 		0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39,
 		0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a,
@@ -65,6 +64,42 @@ public class AES {
 		0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd,
 		0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d};
 	
+	public final static int[] LogTable = {
+		0, 0, 25, 1, 50, 2, 26, 198, 75, 199, 27, 104, 51, 238, 223, 3, 
+		100, 4, 224, 14, 52, 141, 129, 239, 76, 113, 8, 200, 248, 105, 28, 193, 
+		125, 194, 29, 181, 249, 185, 39, 106, 77, 228, 166, 114, 154, 201, 9, 120, 
+		101, 47, 138, 5, 33, 15, 225, 36, 18, 240, 130, 69, 53, 147, 218, 142, 
+		150, 143, 219, 189, 54, 208, 206, 148, 19, 92, 210, 241, 64, 70, 131, 56, 
+		102, 221, 253, 48, 191, 6, 139, 98, 179, 37, 226, 152, 34, 136, 145, 16, 
+		126, 110, 72, 195, 163, 182, 30, 66, 58, 107, 40, 84, 250, 133, 61, 186, 
+		43, 121, 10, 21, 155, 159, 94, 202, 78, 212, 172, 229, 243, 115, 167, 87, 
+		175, 88, 168, 80, 244, 234, 214, 116, 79, 174, 233, 213, 231, 230, 173, 232, 
+		44, 215, 117, 122, 235, 22, 11, 245, 89, 203, 95, 176, 156, 169, 81, 160, 
+		127, 12, 246, 111, 23, 196, 73, 236, 216, 67, 31, 45, 164, 118, 123, 183, 
+		204, 187, 62, 90, 251, 96, 177, 134, 59, 82, 161, 108, 170, 85, 41, 157, 
+		151, 178, 135, 144, 97, 190, 220, 252, 188, 149, 207, 205, 55, 63, 91, 209, 
+		83, 57, 132, 60, 65, 162, 109, 71, 20, 42, 158, 93, 86, 242, 211, 171, 
+		68, 17, 146, 217, 35, 32, 46, 137, 180, 124, 184, 38, 119, 153, 227, 165, 
+		103, 74, 237, 222, 197, 49, 254, 24, 13, 99, 140, 128, 192, 247, 112, 7};
+
+	 public final static int[] AlogTable = {
+		1, 3, 5, 15, 17, 51, 85, 255, 26, 46, 114, 150, 161, 248, 19, 53, 
+		95, 225, 56, 72, 216, 115, 149, 164, 247, 2, 6, 10, 30, 34, 102, 170, 
+		229, 52, 92, 228, 55, 89, 235, 38, 106, 190, 217, 112, 144, 171, 230, 49, 
+		83, 245, 4, 12, 20, 60, 68, 204, 79, 209, 104, 184, 211, 110, 178, 205, 
+		76, 212, 103, 169, 224, 59, 77, 215, 98, 166, 241, 8, 24, 40, 120, 136, 
+		131, 158, 185, 208, 107, 189, 220, 127, 129, 152, 179, 206, 73, 219, 118, 154, 
+		181, 196, 87, 249, 16, 48, 80, 240, 11, 29, 39, 105, 187, 214, 97, 163, 
+		254, 25, 43, 125, 135, 146, 173, 236, 47, 113, 147, 174, 233, 32, 96, 160, 
+		251, 22, 58, 78, 210, 109, 183, 194, 93, 231, 50, 86, 250, 21, 63, 65, 
+		195, 94, 226, 61, 71, 201, 64, 192, 91, 237, 44, 116, 156, 191, 218, 117, 
+		159, 186, 213, 100, 172, 239, 42, 126, 130, 157, 188, 223, 122, 142, 137, 128, 
+		155, 182, 193, 88, 232, 35, 101, 175, 234, 37, 111, 177, 200, 67, 197, 84, 
+		252, 31, 33, 99, 165, 244, 7, 9, 27, 45, 119, 153, 176, 203, 70, 202, 
+		69, 207, 74, 222, 121, 139, 134, 145, 168, 227, 62, 66, 198, 81, 243, 14, 
+		18, 54, 90, 238, 41, 123, 141, 140, 143, 138, 133, 148, 167, 242, 13, 23, 
+		57, 75, 221, 124, 132, 151, 162, 253, 28, 36, 108, 180, 199, 82, 246, 1};
+    
 	/*
 	 * expandKey() expands the key
 	 */
@@ -104,15 +139,20 @@ public class AES {
 		// 2. add round key
 		addRoundKey(0);
 		// 3. 13 rounds
-//		for (int i = 1; i < 14; i++) {
-//			subBytes();
-//			shiftRows();
-//			mixColumns();
-//			addRoundKey(i);
-//		}
-//		subBytes();
-//		shiftRows();
-//		addRoundKey(14);
+		for (int i = 1; i < 14; i++) {
+			subBytes();
+			shiftRows();
+			// mixColmn 4 times
+			for (int col = 0; col < 4; col++) {
+				mixColumn2(col);
+			}
+			System.out.println("After mixColumns:");
+			printState();
+			addRoundKey(i);
+		}
+		subBytes();
+		shiftRows();
+		addRoundKey(14);
 	}
 	
 	/*
@@ -164,6 +204,10 @@ public class AES {
 		state[3] = rotWord(state[3]);
 		state[3] = rotWord(state[3]);
 		state[3] = rotWord(state[3]);
+		
+		// Print state after shiftRows()
+		System.out.println("After shiftRows:");
+		printState();
 	}
 	
 	/*
@@ -181,27 +225,50 @@ public class AES {
 		return row;
 	}
 	
-	public static void mixColumns() {
+    // In the following two methods, the input c is the column number in
+    // your evolving state matrix st (which originally contained 
+    // the plaintext input but is being modified).  Notice that the state here is defined as an
+    // array of bytes.  If your state is an array of integers, you'll have
+    // to make adjustments. 
+	// SOURCE: https://www.cs.utexas.edu/~byoung/cs361/mixColumns-cheat-sheet
+	public static void mixColumn2(int c) { 
+		int a[] = new int[4];
+		for (int i = 0; i < 4; i++) { 
+			a[i] = state[i][c];
+		} 
+		state[0][c] = (mul(2, a[0]) ^ a[2] ^ a[3] ^ mul(3, a[1]));
+		state[1][c] = (mul(2, a[1]) ^ a[3] ^ a[0] ^ mul(3, a[2]));
+		state[2][c] = (mul(2, a[2]) ^ a[0] ^ a[1] ^ mul(3, a[3]));
+		state[3][c] = (mul(2, a[3]) ^ a[1] ^ a[2] ^ mul(3, a[0]));
+	}  
 	
-	}
+	private static int mul(int a, int b) {
+		int inda = (a < 0) ? (a + 256) : a;
+		int indb = (b < 0) ? (b + 256) : b;
+
+		if ((a != 0) && (b != 0)) {
+			int index = (LogTable[inda] + LogTable[indb]);
+			int val = (AlogTable[index % 255]);
+			return val;
+		} else
+			return 0;
+	}  
 	
 	// A bit-wise XOR between the state and expanded key
 	public static void addRoundKey(int round) {
-		int shift = 0;
-		if (round != 0)
-			shift = round*state.length;
+//		int shift = 0;
+//		if (round != 0)
+//			shift = round*state.length;
 
-		int index = 0;
-		for (int c = shift; c < state.length + shift; c++) {
+//		int index = 0;
+		for (int c = 0; c < state.length; c++) {
 			for (int r = 0; r < state[0].length; r++) {
-				state[r][index] ^= expandedKey[r][c];
+				state[r][c] ^= expandedKey[r][c];
 			}
-			index++;
+//			index++;
 		} 
-		
 		System.out.println("After addRoundKey(" + round + "):");
 		printState();
-
 	}
 	
 	//--------------------------------------DECODING-----------------------------------------------
@@ -218,9 +285,13 @@ public class AES {
 		invSubBytes();
 		for (int i = 13; i > 0; i--) {
 			addRoundKey(i);
-			invMixColumns();
-			invShiftRows();
-			invSubBytes();
+			for (int col = 0; col < 4; col++) {
+				invMixColumn2(col);
+			}
+			System.out.println("After invMixColumns:");
+			printState();
+//			invShiftRows();
+//			invSubBytes();
 		}
 		addRoundKey(0);
 	}
@@ -238,8 +309,8 @@ public class AES {
 		    	state[row][col] = invSBox[r][c];
 		    }
 		}
-		// Print state after subBytes()
-		System.out.println("After subBytes:");
+		// Print state after invSubBytes()
+		System.out.println("After invSubBytes:");
 		printState();
 	}
 	
@@ -260,6 +331,9 @@ public class AES {
 		state[3] = invRotWord(state[3]);
 		state[3] = invRotWord(state[3]);
 		state[3] = invRotWord(state[3]);
+		// Print state after invShiftRows()
+		System.out.println("After invShiftRows:");
+		printState();
 	}
 	
 	/*
@@ -277,8 +351,16 @@ public class AES {
 		return row;
 	}
 	
-	public static void invMixColumns() {
-	
+	// SOURCE: https://www.cs.utexas.edu/~byoung/cs361/mixColumns-cheat-sheet
+	public static void invMixColumn2(int c) {
+		int a[] = new int[4];
+		for (int i = 0; i < 4; i++) {
+			a[i] = state[i][c];
+		}
+		state[0][c] = (mul(14, a[0]) ^ mul(11, a[1]) ^ mul(13, a[2]) ^ mul(9, a[3]));
+		state[1][c] = (mul(14, a[1]) ^ mul(11, a[2]) ^ mul(13, a[3]) ^ mul(9, a[0]));
+		state[2][c] = (mul(14, a[2]) ^ mul(11, a[3]) ^ mul(13, a[0]) ^ mul(9, a[1]));
+		state[3][c] = (mul(14, a[3]) ^ mul(11, a[0]) ^ mul(13, a[1]) ^ mul(9, a[2]));
 	}
 	
 	// ------------------------------------------CREATING MATRICES-----------------------------------------
@@ -347,13 +429,19 @@ public class AES {
 	 */
 	public static void printState() {
 		String str = "";
+		String currentVal = "";
 		for (int i = 0; i < state.length; i++) {
 			for (int j = 0; j < state[0].length; j++) {
-				str += Integer.toHexString(state[j][i]).toUpperCase(); 
+				currentVal = Integer.toHexString(state[j][i]).toUpperCase();
+				// 06 will be converted to 6, so need to manually add a 0 in front
+				if (currentVal.length() == 1)
+					currentVal = "0" + currentVal; 
+				str += currentVal;
 			}
 		}
 		System.out.println(str);
 	}
+	
 	public static void main(String args[]) throws FileNotFoundException {
 		// Parse command line args
 		// java AES e key plaintext

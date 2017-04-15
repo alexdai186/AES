@@ -102,6 +102,7 @@ public class AES {
     
 	/*
 	 * expandKey() expands the key
+	 * expandedKey is a 4x60 matrixx
 	 */
 	public static void expandKey(int[][] k, int[][] w) {
 		for(int j = 0; j < 8; j++)
@@ -111,7 +112,7 @@ public class AES {
 		for (int j = 8; j < 60; j++) {
 			if (j % 8 == 0) {
 				w[0][j] = w[0][j-8] ^ subBytesReplace(w, 1, j-1) ^ rcon[j/8];
-				for (int i = 1; i<4; i++)
+				for (int i = 1; i < 4; i++)
 					w[i][j] = w[i][j-8] ^ subBytesReplace(w, (i+1)%4, j-1);
 			}
 			else if (j % 8 == 4) {
@@ -124,7 +125,19 @@ public class AES {
 			}
 		}
 		System.out.println("The expanded key is:");
-		// ????????
+
+//		String str = "";
+//		String currentVal = "";
+//		for (int i = 0; i < w.length; i++) {
+//			for (int j = 0; j < w[0].length; j++) {
+//				currentVal = Integer.toHexString(w[i][j]).toUpperCase();
+//				// 06 will be converted to 6, so need to manually add a 0 in front
+//				if (currentVal.length() == 1)
+//					currentVal = "0" + currentVal; 
+//				str += currentVal;
+//			}
+//		}
+//		System.out.println(str);
 	}
 	
 	//--------------------------------------ENCODING-----------------------------------------------
@@ -150,6 +163,7 @@ public class AES {
 			printState();
 			addRoundKey(i);
 		}
+		// 14. last round has no mixColumn
 		subBytes();
 		shiftRows();
 		addRoundKey(14);
@@ -164,9 +178,10 @@ public class AES {
 		int val = m[r][c];
         // Convert each int value into Hex form first
         String hex = Integer.toHexString(val);
-        // 00 parses to 0, so need to add another 0 back
+        // if the hex is 00, or 01, 02, 03...java parses it just to 0, 1, 2, 3..need to manually add a 0 TO FRONT
+        // ORDER OF ZEROS MATTER!!
         if (hex.length() == 1)
-			hex += "0";
+			hex = "0" + hex;
     	int row = Integer.parseInt(hex.charAt(0) + "",16);
     	int column = Integer.parseInt(hex.charAt(1) + "",16);
     	m[r][c] = sBox[row][column];
@@ -254,18 +269,19 @@ public class AES {
 			return 0;
 	}  
 	
-	// A bit-wise XOR between the state and expanded key
+	/*
+	 * A bit-wise XOR between the state and expanded key
+	 * expandedKey has more columns (60) than state (4), so MAKE SURE KEY IS SHIFTED WHEN XOR-ING
+	 * SHIFT THE EXPANDEDKEY COLUMNS AT EVERY ROUND!! 
+	 */
 	public static void addRoundKey(int round) {
-//		int shift = 0;
-//		if (round != 0)
-//			shift = round*state.length;
-
-//		int index = 0;
-		for (int c = 0; c < state.length; c++) {
-			for (int r = 0; r < state[0].length; r++) {
-				state[r][c] ^= expandedKey[r][c];
+		int shift = round * state.length;
+		for (int col = 0; col < state.length; col++) {
+			for (int row = 0; row < state[0].length; row++) {
+				// expanded key doesn't take in state's col number, needs to go all the way to 59!!!
+				state[row][col] ^= expandedKey[row][shift];
 			}
-//			index++;
+			shift++;
 		} 
 		System.out.println("After addRoundKey(" + round + "):");
 		printState();
@@ -295,25 +311,35 @@ public class AES {
 		}
 		addRoundKey(0);
 	}
+
+	public static int invSubBytesReplace(int[][] m, int r, int c) {
+		int val = m[r][c];
+        // Convert each int value into Hex form first
+        String hex = Integer.toHexString(val);
+        // if the hex is 00, or 01, 02, 03...java parses it just to 0, 1, 2, 3..need to manually add a 0 TO FRONT
+        // ORDER OF ZEROS MATTER!!
+        if (hex.length() == 1)
+			hex = "0" + hex;
+    	int row = Integer.parseInt(hex.charAt(0) + "",16);
+    	int column = Integer.parseInt(hex.charAt(1) + "",16);
+    	m[r][c] = invSBox[row][column];
+		return m[r][c];
+	}
+	
 	/*
 	 * invSubBytes() performs substitution. Replaces all values in state with values from invSBox[][]
 	 */
 	public static void invSubBytes() {
 		for (int row=0; row < state.length; row++) {
 		    for (int col=0; col < state[row].length; col++) {
-		        int val = state[row][col];
-		        // Convert each int into Hex form first
-		        String hex = Integer.toHexString(val);
-		        int r = Integer.parseInt(hex.charAt(0) + "",16);
-		    	int c = Integer.parseInt(hex.charAt(1) + "",16);
-		    	state[row][col] = invSBox[r][c];
+		    	invSubBytesReplace(state, row, col);
 		    }
 		}
 		// Print state after invSubBytes()
 		System.out.println("After invSubBytes:");
 		printState();
 	}
-	
+
 	/*
 	 * invShiftRows() shifts the last three rows to the right. 
 	 * row 0 = same
@@ -415,8 +441,8 @@ public class AES {
 		    for (int j=0; j < m[i].length; j++) {
 		    	// convert int back to hex using Integer.toHexString(int)
 		    	String val = Integer.toHexString(m[i][j]).toUpperCase();
-		    	if (val.length() == 1) // only 1 0
-					val += "0";
+		    	if (val.length() == 1)
+					val = "0" + val;
 				System.out.print(val + "\t");
 		    }
     		System.out.println();

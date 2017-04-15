@@ -92,19 +92,6 @@ public class AES {
 		// ????????
 	}
 	
-	/*
-	 * rotWord takes a word (an array) and rotates it so that the first value becomes the last
-	 * used in expandKey()
-	 */
-	public static String[] rotWord(String[] arr) {
-		String temp = arr[0];
-		for (int i = 0; i < 3; i++) {
-			arr[i] = arr[i+1];
-		}
-		arr[3] = temp; 
-		return arr;
-	}
-	
 	//--------------------------------------ENCODING-----------------------------------------------
 	/*
 	 * encodes the inputfile with the given key string
@@ -160,8 +147,38 @@ public class AES {
 		printState();
 	}
 	
+	/*
+	 * shiftRows() shifts the last three rows to the left. 
+	 * row 0 = same
+	 * row 1 = shift left 1 byte
+	 * row 2 = shifted left 2 bytes
+	 * row 3 = shifted left 3 bytes
+	 */
 	public static void shiftRows() {
-
+		// first row shifted once
+		state[1] = rotWord(state[1]);
+		// second row shifted twice
+		state[2] = rotWord(state[2]);
+		state[2] = rotWord(state[2]);
+		// third row shifted 3 times
+		state[3] = rotWord(state[3]);
+		state[3] = rotWord(state[3]);
+		state[3] = rotWord(state[3]);
+	}
+	
+	/*
+	 * rotWord takes a word (an array) and rotates it one byte to the left so that the first value becomes the last
+	 * returns the rotated word
+	 * used in shiftRows()
+	 */
+	public static int[] rotWord(int[] row) {
+		int temp = row[0];
+		for (int i = 0; i < 3; i++) {
+			row[i] = row[i+1];
+		}
+		// first becomes last
+		row[3] = temp; 
+		return row;
 	}
 	
 	public static void mixColumns() {
@@ -223,11 +240,43 @@ public class AES {
 		}
 		// Print state after subBytes()
 		System.out.println("After subBytes:");
-		printMatrix(state);
+		printState();
 	}
+	
+	/*
+	 * invShiftRows() shifts the last three rows to the right. 
+	 * row 0 = same
+	 * row 1 = shift right 1 byte
+	 * row 2 = shifted right 2 bytes
+	 * row 3 = shifted right 3 bytes
+	 */
 	public static void invShiftRows() {
-
+		// first row shifted once
+		state[1] = invRotWord(state[1]);
+		// second row shifted twice
+		state[2] = invRotWord(state[2]);
+		state[2] = invRotWord(state[2]);
+		// third row shifted 3 times
+		state[3] = invRotWord(state[3]);
+		state[3] = invRotWord(state[3]);
+		state[3] = invRotWord(state[3]);
 	}
+	
+	/*
+	 * invRotWord takes a word (an array) and rotates it one byte to the right so that the last value becomes the first
+	 * returns the rotated word
+	 * used in shiftRows()
+	 */
+	public static int[] invRotWord(int[] row) {
+		int temp = row[3];
+		for (int i = 3; i > 0; i--) {
+			row[i] = row[i-1];
+		}
+		// last becomes first
+		row[0] = temp; 
+		return row;
+	}
+	
 	public static void invMixColumns() {
 	
 	}

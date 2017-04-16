@@ -104,8 +104,9 @@ public class AES {
     
 	/*
 	 * expandKey() expands the key
-	 * expandedKey is a 4x60 matrixx
+	 * expandedKey is a 4x60 matrix
 	 */
+	// SOURCE: https://www.cs.utexas.edu/~byoung/cs361/aes-key-expansion.pdf
 	public static void expandKey(int[][] k, int[][] w) {
 		for(int j = 0; j < 8; j++)
 			for (int i = 0; i < 4; i++)
@@ -134,7 +135,7 @@ public class AES {
 	 * creates an encrypted outputfile (inputFile.enc)
 	 */
 	public static void encode(File inputFile, String key, File outputFile) throws IOException {
-		PrintWriter pw = new PrintWriter(outputFile);
+		PrintWriter pw = new PrintWriter(new FileWriter(outputFile, true));
 		// add round key before rounding begins
 		addRoundKey(0);
 		// 13 rounds
@@ -166,7 +167,7 @@ public class AES {
                 str += currentVal;
             }
         }
-        pw.write(str);
+        pw.print(str + "\n");
         pw.close();
 	}
 	
@@ -311,7 +312,7 @@ public class AES {
 	 * creates a decrypted file (inputFile.dec)
 	 */
 	public static void decode(File inputFile, String key, File outputFile) throws IOException {
-		PrintWriter pw = new PrintWriter(outputFile);
+		PrintWriter pw = new PrintWriter(new FileWriter(outputFile, true));
 		// before first round begins
 		addRoundKey(14);
 		invShiftRows();
@@ -340,7 +341,7 @@ public class AES {
                 str += currentVal;
             }
         }
-        pw.write(str);
+        pw.print(str + "\n");
         pw.close();
 	}
 
@@ -536,15 +537,23 @@ public class AES {
 //                printMatrix(expandedKey);
                 // Call encode/decode
 				if (encoding) {
+					long startTime = System.currentTimeMillis();
 					encode(inputFile, keyString, outputFile);
-//                    System.out.println("The Ciphertext:");
-//                    printMatrix(state);
+//					System.out.println("The Ciphertext:");
+//					printMatrix(state);
+					long endTime = System.currentTimeMillis();
+					long duration = endTime - startTime;
+					System.out.println("Encryption time: " + duration + "ms");                    
 				} else {
+					long startTime = System.currentTimeMillis();
 					decode(inputFile, keyString, outputFile);
 //                    System.out.println("The decryption of the ciphertext:");
 //                    printMatrix(state);
 //                    System.out.println("The decryption of the ciphertext:");
 //                    printState();
+					long endTime = System.currentTimeMillis();
+					long duration = endTime - startTime;
+					System.out.println("Decryption time: " + duration + "ms");
 				}
 			}
 			scanInput.close();

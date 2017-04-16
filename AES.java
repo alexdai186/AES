@@ -64,6 +64,7 @@ public class AES {
 		0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd,
 		0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d};
 	
+	// SOURCE: https://www.cs.utexas.edu/~byoung/cs361/mixColumns-cheat-sheet
 	public final static int[] LogTable = {
 		0, 0, 25, 1, 50, 2, 26, 198, 75, 199, 27, 104, 51, 238, 223, 3, 
 		100, 4, 224, 14, 52, 141, 129, 239, 76, 113, 8, 200, 248, 105, 28, 193, 
@@ -81,7 +82,8 @@ public class AES {
 		83, 57, 132, 60, 65, 162, 109, 71, 20, 42, 158, 93, 86, 242, 211, 171, 
 		68, 17, 146, 217, 35, 32, 46, 137, 180, 124, 184, 38, 119, 153, 227, 165, 
 		103, 74, 237, 222, 197, 49, 254, 24, 13, 99, 140, 128, 192, 247, 112, 7};
-
+	
+	// SOURCE: https://www.cs.utexas.edu/~byoung/cs361/mixColumns-cheat-sheet
 	 public final static int[] AlogTable = {
 		1, 3, 5, 15, 17, 51, 85, 255, 26, 46, 114, 150, 161, 248, 19, 53, 
 		95, 225, 56, 72, 216, 115, 149, 164, 247, 2, 6, 10, 30, 34, 102, 170, 
@@ -111,32 +113,19 @@ public class AES {
 		
 		for (int j = 8; j < 60; j++) {
 			if (j % 8 == 0) {
-				w[0][j] = w[0][j-8] ^ subBytesReplace2(w, 1, j-1) ^ rcon[j/8];
+				w[0][j] = w[0][j-8] ^ getSubBytes(w, 1, j-1) ^ rcon[j/8];
 				for (int i = 1; i < 4; i++)
-					w[i][j] = w[i][j-8] ^ subBytesReplace2(w, (i+1)%4, j-1);
+					w[i][j] = w[i][j-8] ^ getSubBytes(w, (i+1)%4, j-1);
 			}
 			else if (j % 8 == 4) {
 				for (int i = 0; i < 4; i++)
-					w[i][j] = w[i][j-8] ^ subBytesReplace2(w, i, j-1);
+					w[i][j] = w[i][j-8] ^ getSubBytes(w, i, j-1);
 			}
 			else {
 				for (int i = 0; i < 4; i++)
 					w[i][j] = w[i][j-8] ^ w[i][j-1];
 			}
 		}
-
-//		String str = "";
-//		String currentVal = "";
-//		for (int i = 0; i < w.length; i++) {
-//			for (int j = 0; j < w[0].length; j++) {
-//				currentVal = Integer.toHexString(w[i][j]).toUpperCase();
-//				// 06 will be converted to 6, so need to manually add a 0 in front
-//				if (currentVal.length() == 1)
-//					currentVal = "0" + currentVal; 
-//				str += currentVal;
-//			}
-//		}
-//		System.out.println(str);
 	}
 	
 	//--------------------------------------ENCODING-----------------------------------------------
@@ -146,9 +135,9 @@ public class AES {
 	 */
 	public static void encode(File inputFile, String key, File outputFile) throws IOException {
 		PrintWriter pw = new PrintWriter(outputFile);
-		// 2. add round key
+		// add round key before rounding begins
 		addRoundKey(0);
-		// 3. 13 rounds
+		// 13 rounds
 		for (int i = 1; i < 14; i++) {
 			subBytes();
 			shiftRows();
@@ -156,11 +145,11 @@ public class AES {
 			for (int col = 0; col < 4; col++) {
 				mixColumn2(col);
 			}
-			System.out.println("After mixColumns:");
-			printState();
+//			System.out.println("After mixColumns:");
+//			printState();
 			addRoundKey(i);
 		}
-		// 14. last round has no mixColumn
+		// last round has no mixColumn
 		subBytes();
 		shiftRows();
 		addRoundKey(14);
@@ -198,15 +187,16 @@ public class AES {
     	int column = Integer.parseInt(hex.charAt(1) + "",16);
     	m[r][c] = sBox[row][column];
 		return m[r][c];
-        //return sBox[row][column];
 	}
-
-    public static int subBytesReplace2(int[][] m, int r, int c) {
+	
+	/*
+	 * getSubBytes() just gets the value at specific r and c for matrix m
+	 * does not perform the actual replacing
+	 * used in key expansion only
+	 */
+    public static int getSubBytes(int[][] m, int r, int c) {
         int val = m[r][c];
-        // Convert each int value into Hex form first
         String hex = Integer.toHexString(val);
-        // if the hex is 00, or 01, 02, 03...java parses it just to 0, 1, 2, 3..need to manually add a 0 TO FRONT
-        // ORDER OF ZEROS MATTER!!
         if (hex.length() == 1)
             hex = "0" + hex;
         int row = Integer.parseInt(hex.charAt(0) + "",16);
@@ -226,8 +216,8 @@ public class AES {
 		    }
 		}
 		// Print state after subBytes()
-		System.out.println("After subBytes:");
-		printState();
+//		System.out.println("After subBytes:");
+//		printState();
 	}
 	
 	/*
@@ -249,8 +239,8 @@ public class AES {
 		state[3] = rotWord(state[3]);
 		
 		// Print state after shiftRows()
-		System.out.println("After shiftRows:");
-		printState();
+//		System.out.println("After shiftRows:");
+//		printState();
 	}
 	
 	/*
@@ -311,8 +301,8 @@ public class AES {
 			}
 			shift++;
 		} 
-		System.out.println("After addRoundKey(" + round + "):");
-		printState();
+//		System.out.println("After addRoundKey(" + round + "):");
+//		printState();
 	}
 	
 	//--------------------------------------DECODING-----------------------------------------------
@@ -331,8 +321,8 @@ public class AES {
 			for (int col = 0; col < 4; col++) {
 				invMixColumn2(col);
 			}
-			System.out.println("After invMixColumns:");
-			printState();
+//			System.out.println("After invMixColumns:");
+//			printState();
 			invShiftRows();
 			invSubBytes();
 		}
@@ -378,8 +368,8 @@ public class AES {
 		    }
 		}
 		// Print state after invSubBytes()
-		System.out.println("After invSubBytes:");
-		printState();
+//		System.out.println("After invSubBytes:");
+//		printState();
 	}
 
 	/*
@@ -400,8 +390,8 @@ public class AES {
 		state[3] = invRotWord(state[3]);
 		state[3] = invRotWord(state[3]);
 		// Print state after invShiftRows()
-		System.out.println("After invShiftRows:");
-		printState();
+//		System.out.println("After invShiftRows:");
+//		printState();
 	}
 	
 	/*
@@ -448,14 +438,13 @@ public class AES {
 				row++;
 			}
 		}
-
 	}
 	
 	/*
 	 * createkeymatrix() converts keystring into a 4x8 matrix
 	 */
 	public static void createKeyMatrix(String key) {
-		// 0000000000000000000000000000000000000000000000000000000000000000
+		// key: 0000000000000000000000000000000000000000000000000000000000000000
 		int row = 0;
 		int col = 0;
 		for (int i=0; i < key.length(); i+=2) {
@@ -535,29 +524,27 @@ public class AES {
 			// LOOP OVER EACH LINE IN INPUTFILE. EACH LINE REPRESENTS 128 BITS
 			while (scanInput.hasNextLine()) {
 				String line = scanInput.nextLine();
-				// Fill state array
+				
 				createStateMatrix(line);
+//                System.out.println("The Plaintext is:");
+//                printMatrix(state);
 				createKeyMatrix(keyString);
+//                System.out.println("The Cipher Key is:");
+//                printMatrix(keyMatrix);
                 expandKey(keyMatrix, expandedKey);
-				// Call encode/decode
+//                System.out.println("The Expanded Key is:");
+//                printMatrix(expandedKey);
+                // Call encode/decode
 				if (encoding) {
-                    // Print out state array to console
-                    System.out.println("The Plaintext is:");
-                    printMatrix(state);
-                    // Print out state array to console
-                    System.out.println("The Cipher Key is:");
-                    printMatrix(keyMatrix);
-                    System.out.println("The Expanded Key is:");
-                    printMatrix(expandedKey);
-                    // 1. expand cipher key
-
 					encode(inputFile, keyString, outputFile);
-                    System.out.println("The Ciphertext:");
-                    printMatrix(state);
+//                    System.out.println("The Ciphertext:");
+//                    printMatrix(state);
 				} else {
 					decode(inputFile, keyString, outputFile);
-                    System.out.println("The decryption of the ciphertext:");
-                    printMatrix(state);
+//                    System.out.println("The decryption of the ciphertext:");
+//                    printMatrix(state);
+//                    System.out.println("The decryption of the ciphertext:");
+//                    printState();
 				}
 			}
 			scanInput.close();

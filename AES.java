@@ -12,7 +12,7 @@ public class AES {
 		/*1*/{0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0}, 
 		/*2*/{0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15}, 
 		/*3*/{0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x80, 0xe2, 0xeb, 0x27, 0xb2, 0x75}, 
-		/*4*/{0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0, 0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84}, 
+		/*4*/{0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0, 0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84},
 		/*5*/{0x53, 0xd1, 0x00, 0xed, 0x20, 0xfc, 0xb1, 0x5b, 0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf},
 		/*6*/{0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c, 0x9f, 0xa8},
 		/*7*/{0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5, 0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2},
@@ -111,20 +111,19 @@ public class AES {
 		
 		for (int j = 8; j < 60; j++) {
 			if (j % 8 == 0) {
-				w[0][j] = w[0][j-8] ^ subBytesReplace(w, 1, j-1) ^ rcon[j/8];
+				w[0][j] = w[0][j-8] ^ subBytesReplace2(w, 1, j-1) ^ rcon[j/8];
 				for (int i = 1; i < 4; i++)
-					w[i][j] = w[i][j-8] ^ subBytesReplace(w, (i+1)%4, j-1);
+					w[i][j] = w[i][j-8] ^ subBytesReplace2(w, (i+1)%4, j-1);
 			}
 			else if (j % 8 == 4) {
 				for (int i = 0; i < 4; i++)
-					w[i][j] = w[i][j-8] ^ subBytesReplace(w, i, j-1);
+					w[i][j] = w[i][j-8] ^ subBytesReplace2(w, i, j-1);
 			}
 			else {
 				for (int i = 0; i < 4; i++)
 					w[i][j] = w[i][j-8] ^ w[i][j-1];
 			}
 		}
-		System.out.println("The expanded key is:");
 
 //		String str = "";
 //		String currentVal = "";
@@ -147,8 +146,6 @@ public class AES {
 	 */
 	public static void encode(File inputFile, String key, File outputFile) throws IOException {
 		PrintWriter pw = new PrintWriter(outputFile);
-		// 1. expand cipher key
-		expandKey(keyMatrix, expandedKey);
 		// 2. add round key
 		addRoundKey(0);
 		// 3. 13 rounds
@@ -167,6 +164,21 @@ public class AES {
 		subBytes();
 		shiftRows();
 		addRoundKey(14);
+
+        // Output ciphertext to file
+        String str = "";
+        String currentVal = "";
+        for (int i = 0; i < state.length; i++) {
+            for (int j = 0; j < state[0].length; j++) {
+                currentVal = Integer.toHexString(state[j][i]).toUpperCase();
+                // 06 will be converted to 6, so need to manually add a 0 in front
+                if (currentVal.length() == 1)
+                    currentVal = "0" + currentVal;
+                str += currentVal;
+            }
+        }
+        pw.write(str);
+        pw.close();
 	}
 	
 	/*
@@ -186,7 +198,23 @@ public class AES {
     	int column = Integer.parseInt(hex.charAt(1) + "",16);
     	m[r][c] = sBox[row][column];
 		return m[r][c];
+        //return sBox[row][column];
 	}
+
+    public static int subBytesReplace2(int[][] m, int r, int c) {
+        int val = m[r][c];
+        // Convert each int value into Hex form first
+        String hex = Integer.toHexString(val);
+        // if the hex is 00, or 01, 02, 03...java parses it just to 0, 1, 2, 3..need to manually add a 0 TO FRONT
+        // ORDER OF ZEROS MATTER!!
+        if (hex.length() == 1)
+            hex = "0" + hex;
+        int row = Integer.parseInt(hex.charAt(0) + "",16);
+        int column = Integer.parseInt(hex.charAt(1) + "",16);
+//    	m[r][c] = sBox[row][column];
+//		return m[r][c];
+        return sBox[row][column];
+    }
 	
 	/*
 	 * subBytes() performs substitution. Replaces all values in state with values from sBox[][]
@@ -294,7 +322,6 @@ public class AES {
 	 */
 	public static void decode(File inputFile, String key, File outputFile) throws IOException {
 		PrintWriter pw = new PrintWriter(outputFile);
-		expandKey(keyMatrix, expandedKey);
 		// before first round begins
 		addRoundKey(14);
 		invShiftRows();
@@ -306,10 +333,25 @@ public class AES {
 			}
 			System.out.println("After invMixColumns:");
 			printState();
-//			invShiftRows();
-//			invSubBytes();
+			invShiftRows();
+			invSubBytes();
 		}
 		addRoundKey(0);
+
+        // Output ciphertext to file
+        String str = "";
+        String currentVal = "";
+        for (int i = 0; i < state.length; i++) {
+            for (int j = 0; j < state[0].length; j++) {
+                currentVal = Integer.toHexString(state[j][i]).toUpperCase();
+                // 06 will be converted to 6, so need to manually add a 0 in front
+                if (currentVal.length() == 1)
+                    currentVal = "0" + currentVal;
+                str += currentVal;
+            }
+        }
+        pw.write(str);
+        pw.close();
 	}
 
 	public static int invSubBytesReplace(int[][] m, int r, int c) {
@@ -406,9 +448,7 @@ public class AES {
 				row++;
 			}
 		}
-		// Print out state array to console
-		System.out.println("The Plaintext is:");
-		printMatrix(state);
+
 	}
 	
 	/*
@@ -429,9 +469,6 @@ public class AES {
 				row++;
 			}
 		}
-		// Print out state array to console
-		System.out.println("The CipherKey is:");
-		printMatrix(keyMatrix);
 	}
 	/*
 	 * printMatrix prints out all matrixes in correct format
@@ -501,11 +538,26 @@ public class AES {
 				// Fill state array
 				createStateMatrix(line);
 				createKeyMatrix(keyString);
+                expandKey(keyMatrix, expandedKey);
 				// Call encode/decode
 				if (encoding) {
+                    // Print out state array to console
+                    System.out.println("The Plaintext is:");
+                    printMatrix(state);
+                    // Print out state array to console
+                    System.out.println("The Cipher Key is:");
+                    printMatrix(keyMatrix);
+                    System.out.println("The Expanded Key is:");
+                    printMatrix(expandedKey);
+                    // 1. expand cipher key
+
 					encode(inputFile, keyString, outputFile);
+                    System.out.println("The Ciphertext:");
+                    printMatrix(state);
 				} else {
 					decode(inputFile, keyString, outputFile);
+                    System.out.println("The decryption of the ciphertext:");
+                    printMatrix(state);
 				}
 			}
 			scanInput.close();
